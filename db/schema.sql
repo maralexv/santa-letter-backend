@@ -2,8 +2,8 @@
 -- Things worth knowing:
 --   * notes.NoteText is nullable and stored as utf32; the app talks utf8mb4 and MariaDB converts.
 --   * notes.Time is "ON UPDATE current_timestamp()": ANY update of a note row resets its time to now.
---     The app never updates notes, and db/decode_legacy_notes.php sets "Time = Time" to avoid it.
---     Do the same in any manual UPDATE (otherwise old notes jump into the current year).
+--     The app never updates notes. In any manual UPDATE of notes also write "Time = Time"
+--     (otherwise old notes jump into the current year).
 
 -- ---------------------------------------------------------------------------
 -- A) Fresh database only (testing / new install). Do NOT run on the live DB.

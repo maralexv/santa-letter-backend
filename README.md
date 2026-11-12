@@ -13,7 +13,6 @@ assets/              style.css, app.js
 partials/head.php    shared <head>
 src/bootstrap.php    config, DB connection, session + CSRF, validation helpers
 db/schema.sql        the live table definitions, plus one optional UNIQUE index
-db/decode_legacy_notes.php   one-off migration from the old code, see "Deploy"
 config.example.php   copy to config.php (git-ignored) and fill in
 ```
 
@@ -39,6 +38,9 @@ root) returns `db` settings and `limits` (max name/note length; keep them within
 set `'charset' => 'latin1'` in `config.php` and reload. Plain English text is unaffected either way.
 
 ## Deploy to the VM
+
+**Day to day, use the one-command deploy:** `./deploy/deploy.sh` on the VM (see `deploy/README.md`). The manual
+procedure below is what was used for the first deployment, and is kept as a reference and for a fresh server.
 
 This is the procedure that was used on the live VM (Debian 11, Apache, PHP 7.4, MariaDB 10.5, web root
 `/var/www/html`, connected through the Google Cloud "SSH" button, so no SSH key exists on the Mac).
@@ -82,20 +84,7 @@ Adjust paths if yours differ. Do the steps in order and check each result before
    ```
    Expected: only `lint-done` before the JSON, `{"user":null,"csrf":"..."}`, and `results http=200`.
    On any problem read `/tmp/santa-test.log` and stop.
-5. **Convert old data, once (on the VM).** The old code stored text HTML-encoded (`Tom &amp; Jerry`).
-   ```
-   cd ~/santa-letter-new
-   php db/decode_legacy_notes.php | grep -E 'row\(s\)|Dry run'     # dry run: counts only
-   ```
-   If it reports rows to change, apply it exactly once, with a fresh backup and a check that no note's date moved:
-   ```
-   sudo mysqldump notes > ~/notes-backup-before-decode.sql
-   sudo mysql notes -N -e "SELECT NoteID, Time FROM notes ORDER BY NoteID" > /tmp/times-before.txt
-   php db/decode_legacy_notes.php --apply | grep -E 'row\(s\)|Done|Already'
-   sudo mysql notes -N -e "SELECT NoteID, Time FROM notes ORDER BY NoteID" | diff - /tmp/times-before.txt && echo TIMES-UNCHANGED
-   ```
-   It refuses to run a second time. Do step 6 right after it.
-6. **Switch the code (on the VM).** The old endpoints contain the database password, so delete them.
+5. **Switch the code (on the VM).** The old endpoints contain the database password, so delete them.
    ```
    sudo rm -f /var/www/html/header.php /var/www/html/getuser.php /var/www/html/fetchnotes.php /var/www/html/recordnewnote.php /var/www/html/removenote.php
    sudo cp -r --no-preserve=ownership ~/santa-letter-new/. /var/www/html/
@@ -107,7 +96,7 @@ Adjust paths if yours differ. Do the steps in order and check each result before
    ```
    The code stays owned by `root` (the web server user cannot rewrite it); only `config.php` is
    readable by the web server group. The app writes nothing into the web root.
-7. **Check.**
+6. **Check.**
    ```
    curl -s -o /dev/null -w 'index     %{http_code}\n' http://localhost/index.php
    curl -s -o /dev/null -w 'results   %{http_code}\n' http://localhost/results.php
@@ -123,7 +112,7 @@ Adjust paths if yours differ. Do the steps in order and check each result before
 
    Then in a browser: sign in with a name, add a wish containing `&` and `é`, reload, delete it, sign
    out, open "See everyone's wishes", and sign in with an old email to see its old list.
-8. **Roll back if needed.**
+7. **Roll back if needed.**
    ```
    sudo rm -rf /var/www/html && sudo cp -a ~/webroot-backup-DATE /var/www/html
    sudo mysql notes < ~/notes-backup-DATE.sql
@@ -132,6 +121,11 @@ Adjust paths if yours differ. Do the steps in order and check each result before
 Users who signed in with an email before still get their old list by typing that same email. To
 move someone to a name instead:
 `UPDATE users SET UserName = 'Anna' WHERE UserName = 'anna@example.com';`
+
+**History.** The old code stored text HTML-encoded (`Tom &amp; Jerry`). When the live site was moved to this
+code on 2026-11-12, those rows were converted once with a one-off script, which was then removed so it cannot
+be run twice by accident. It is still in the git history (`git show 4b140b9:db/decode_legacy_notes.php`).
+A fresh install does not need it.
 
 ## Make the `.htaccess` lock-outs work (Apache, optional)
 
