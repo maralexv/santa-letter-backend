@@ -1,4 +1,3 @@
 config.php
-db/.legacy_decoded
 *.log
 .DS_Store
