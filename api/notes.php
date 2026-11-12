@@ -26,7 +26,8 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $stmt->execute();
         $notes = [];
         foreach ($stmt->get_result() as $row) {
-            $notes[] = ['id' => (int) $row['NoteID'], 'text' => $row['NoteText'], 'time' => $row['Time']];
+            // NoteText is nullable in the database; show such rows as empty so they can still be deleted.
+            $notes[] = ['id' => (int) $row['NoteID'], 'text' => (string) $row['NoteText'], 'time' => $row['Time']];
         }
         json_out(['notes' => $notes]);
 

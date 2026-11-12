@@ -32,18 +32,24 @@ function decode(string $s): string
 }
 
 $db = db();
+// [id column, text column, extra assignment].
+// notes.Time is declared "ON UPDATE current_timestamp()": a plain UPDATE would move every
+// changed note to today, i.e. into the current year. "Time = Time" keeps the original value.
 $targets = [
-    'users' => ['UserID', 'UserName'],
-    'notes' => ['NoteID', 'NoteText'],
+    'users' => ['UserID', 'UserName', ''],
+    'notes' => ['NoteID', 'NoteText', ', `Time` = `Time`'],
 ];
 
 $db->begin_transaction();
 $total = 0;
-foreach ($targets as $table => [$idCol, $textCol]) {
+foreach ($targets as $table => [$idCol, $textCol, $keep]) {
     $changed = 0;
-    $update = $db->prepare("UPDATE `$table` SET `$textCol` = ? WHERE `$idCol` = ?");
+    $update = $db->prepare("UPDATE `$table` SET `$textCol` = ?$keep WHERE `$idCol` = ?");
     $rows = $db->query("SELECT `$idCol`, `$textCol` FROM `$table`");
     foreach ($rows as $row) {
+        if ($row[$textCol] === null) {      // NoteText is nullable
+            continue;
+        }
         $decoded = decode($row[$textCol]);
         if ($decoded === $row[$textCol]) {
             continue;

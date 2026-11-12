@@ -12,7 +12,7 @@ api/notes.php        GET my wishes / POST add / DELETE remove (always the signed
 assets/              style.css, app.js
 partials/head.php    shared <head>
 src/bootstrap.php    config, DB connection, session + CSRF, validation helpers
-db/schema.sql        table definitions (draft, see file) and optional indexes
+db/schema.sql        the live table definitions, plus one optional UNIQUE index
 db/decode_legacy_notes.php   one-off migration from the old code, see "Deploy"
 config.example.php   copy to config.php (git-ignored) and fill in
 ```
@@ -65,12 +65,15 @@ copy from your Mac. Adjust paths if yours differ. Do them in order.
    ```
    It refuses to run a second time. Do this step right before step 5, not days earlier.
 5. **Switch the code (on the VM).** The old endpoints contain the database password, so delete them.
+   Also move any stray backup files (such as `index.old`) out of the web root: Apache serves them as plain text.
    ```
    cd /var/www/html && sudo rm -f header.php getuser.php fetchnotes.php recordnewnote.php removenote.php
-   sudo rsync -a --exclude db --exclude .git ~/santa-letter-new/ /var/www/html/
-   sudo chown -R www-data:www-data /var/www/html   # use the owner your backup folder has
+   sudo rsync -a --chown=root:root --exclude db --exclude .git ~/santa-letter-new/ /var/www/html/
+   sudo chown root:www-data /var/www/html/config.php && sudo chmod 640 /var/www/html/config.php
    ```
-6. **Optional indexes.** See section B of `db/schema.sql` (run its duplicate check first).
+   The code stays owned by `root` (the web server user cannot rewrite it); only `config.php` is
+   readable by the web server group. The app writes nothing into the web root.
+6. **Optional unique-name index.** Section B of `db/schema.sql` (run its duplicate check first). The app works without it.
 7. **Check.**
    - Open the site, type a name, add a wish containing `&` and `é`, reload, delete it, open "See everyone's wishes".
    - `curl -s -o /dev/null -w '%{http_code}\n' http://VM_IP/src/bootstrap.php` must print `403` or `404`.
@@ -87,8 +90,7 @@ Users who signed in with an email before still get their old list by typing that
 move someone to a name instead:
 `UPDATE users SET UserName = 'Anna' WHERE UserName = 'anna@example.com';`
 
-On nginx, `.htaccess` files do nothing: add `location ~ ^/(src|db|partials)/ { deny all; }` and
-`location = /config.php { deny all; }` to the server block.
+
 
 ## Notes for developers
 
