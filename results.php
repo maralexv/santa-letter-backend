@@ -16,11 +16,15 @@ $stmt->execute();
 // Group the wishes per person. Names containing "@" are shown masked (see mask_name()).
 $people = [];
 foreach ($stmt->get_result() as $row) {
+    $wish = (string) $row['NoteText'];      // NoteText is nullable in the database
+    if (trim($wish) === '') {
+        continue;
+    }
     $id = (int) $row['UserID'];
     if (!isset($people[$id])) {
         $people[$id] = ['name' => mask_name($row['UserName']), 'wishes' => []];
     }
-    $people[$id]['wishes'][] = $row['NoteText'];
+    $people[$id]['wishes'][] = $wish;
 }
 
 $pageTitle = 'All wishes';
