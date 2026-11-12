@@ -1,58 +1,57 @@
 <?php
-// Initiate the session
-session_start();
+declare(strict_types=1);
+require __DIR__ . '/src/bootstrap.php';
 
-// Set cookie if not set yet
-$cookiename = "usr";
-$cookievalue;
-if(!isset($_COOKIE[$cookiename])) {
-    setcookie($cookiename, $cookievalue,  time()+(60*60*24*30), "/var/www/html"); // 60*60*24*30 = 30 days
-    // echo "(number of cookies: " . count($_COOKIE) . ")";
-}
+$maxNote = (int) config()['limits']['note'];
+$maxName = (int) config()['limits']['name'];
+$pageTitle = 'Santa Letter';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-<head> 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Santa Letter</title>
-
-    <?php require 'header.php';?>
-
+<head>
+<?php require __DIR__ . '/partials/head.php'; ?>
+    <script src="<?= e(asset('app.js')) ?>" defer></script>
 </head>
-
 <body>
+<main class="wrap">
+    <header class="hero">
+        <h1>Dear Santa,</h1>
+        <p>Write down what you would like for Christmas.</p>
+    </header>
 
-<div id="login">
-    <!-- <form id="loginform" action=""> -->
-        <label for="user">Type in your email please:</label>
-        <input type="email" id="user" name="user" placeholder="name@email.com">
-        <button onclick= "getUser()">submit</button>
-    <!-- </form> -->
-</div>
+    <section id="login" class="card" hidden>
+        <form id="login-form">
+            <label for="name">Type in your name please:</label>
+            <div class="row">
+                <input id="name" name="name" type="text" maxlength="<?= $maxName ?>"
+                       autocomplete="given-name" placeholder="Your name" required>
+                <button class="btn" type="submit">Continue</button>
+            </div>
+        </form>
+    </section>
 
-<div id="userout" style="display: none;">
-    <p><span id="welcome"></span><strong><span id="useremail"></span></strong></p>
-</div>
+    <section id="app" class="card" hidden>
+        <p class="who"><span id="greeting"></span><strong id="who"></strong>
+            <button id="logout" class="link" type="button">not you?</button></p>
 
-<div id="newnoteform" style="display: none;">
-    <form id="newnote" action="">
-        <!-- <label for="newnotetxt">add your new note:</label> -->
-        <textarea id="newnotetxt" type="text" name="newnote" rows="2" cols="64">
-Type here and add to your Christmas wish list...
-        </textarea>
-        <input id="submit" type="submit" value="add">
-    </form>
-</div>
+        <form id="note-form">
+            <label for="note">Add to your Christmas wish list:</label>
+            <textarea id="note" rows="3" maxlength="<?= $maxNote ?>"
+                      placeholder="Type here and add to your Christmas wish list..."></textarea>
+            <button id="add" class="btn" type="submit" disabled>Add wish</button>
+        </form>
 
-<div id="yn" style="display: none;"><span></span></div>
-<div id="notes" style="display: none;"></div>
+        <h2>Your Christmas wish list for this year</h2>
+        <ul id="notes" class="notes"></ul>
+        <p id="empty" class="muted" hidden>Nothing here yet. Add your first wish above.</p>
+    </section>
 
-<footer>
-    <a href="results.php"><button>click here to see all whishes</button></a><br><br>
-    Copyright scarvesfamily&copy; <?php echo date("Y");?>
-</footer><br>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+</main>
 
+<footer class="site-footer">
+    <a class="btn secondary" href="results.php">See everyone's wishes</a>
+    <p>Copyright scarvesfamily&copy; <?= date('Y') ?></p>
+</footer>
 </body>
 </html>

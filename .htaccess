@@ -1,0 +1,5 @@
+# Apache only (ignored by nginx). Needs "AllowOverride All" (or at least Limit/FileInfo) for this folder.
+Options -Indexes
+<FilesMatch "^(config\.php|\.legacy_decoded|\.gitignore)$">
+    Require all denied
+</FilesMatch>

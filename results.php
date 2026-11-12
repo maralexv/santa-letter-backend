@@ -1,64 +1,60 @@
+<?php
+declare(strict_types=1);
+require __DIR__ . '/src/bootstrap.php';
+
+[$from, $to] = year_range();
+$stmt = db()->prepare(
+    'SELECT u.UserID, u.UserName, n.NoteText
+     FROM notes n
+     INNER JOIN users u ON n.User_id = u.UserID
+     WHERE n.Time >= ? AND n.Time < ?
+     ORDER BY u.UserName ASC, u.UserID ASC, n.NoteID ASC'
+);
+$stmt->bind_param('ss', $from, $to);
+$stmt->execute();
+
+// Group the wishes per person. Names containing "@" are shown masked (see mask_name()).
+$people = [];
+foreach ($stmt->get_result() as $row) {
+    $id = (int) $row['UserID'];
+    if (!isset($people[$id])) {
+        $people[$id] = ['name' => mask_name($row['UserName']), 'wishes' => []];
+    }
+    $people[$id]['wishes'][] = $row['NoteText'];
+}
+
+$pageTitle = 'All wishes';
+?>
 <!DOCTYPE html>
 <html lang="en">
-<head> 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Santa Letter - All Wishes</title>
-
-    <?php require 'header.php';?>
-
+<head>
+<?php require __DIR__ . '/partials/head.php'; ?>
 </head>
-
 <body>
-    <div style="text-align: center;"><h1>All Christmas wishes for this year:</h1></div>
-    <div id="wishes" style="display: block;">
-        <?php
-            $dbhost = "localhost";
-            $dbuser = "alex";
-            $dbpass = "easter2000";
-            $db = "notes";
+<main class="wrap">
+    <header class="hero">
+        <h1>All Christmas wishes for this year</h1>
+    </header>
 
-            // Create connection to MariaDB server
-            $conn = new mysqli($dbhost, $dbuser, $dbpass, $db);
+<?php if (!$people): ?>
+    <p class="card muted center">Nothing on record yet...</p>
+<?php endif; ?>
 
-            // Check connection
-            if($conn->connect_error) {
-                die("Connection failed: " . $conn->connect_error);
-            }
-            // echo "Connected successfully";
+<?php foreach ($people as $person): ?>
+    <section class="card">
+        <h2 class="person"><?= e($person['name']) ?></h2>
+        <ul class="notes">
+<?php foreach ($person['wishes'] as $wish): ?>
+            <li class="note"><p><?= e($wish) ?></p></li>
+<?php endforeach; ?>
+        </ul>
+    </section>
+<?php endforeach; ?>
+</main>
 
-            $currentyear = date("Y");
-
-            $sql = "SELECT users.UserName, notes.NoteText, notes.Time, notes.NoteID
-                    FROM notes 
-                    INNER JOIN users ON notes.User_id=users.UserID 
-                    WHERE YEAR(notes.Time)=$currentyear  
-                    ORDER BY users.UserName 
-                    ASC;";
-            $result = $conn->query($sql);
-
-            // loop through the result  
-            if ($result->num_rows > 0) {
-                // print out (display) the table of wishes fior each user
-                echo "<table><tr><th>Authors' emails</th><th>Their wishes</th></tr>";
-                while ($row = $result->fetch_assoc()) {
-                    // display users and notes
-                    echo "<tr><td>" . $row["UserName"]. "</td><td>" . $row["NoteText"]. "</td></tr>";
-                }
-                echo "</table>";
-
-            } else {
-                echo "<p style='text-align: center;'>Nothing on record yet...<p>";
-            };
-
-        ?>
-
-    </div>
-
-    <footer>
-        <a href="index.php"><button>back</button></a><br><br>
-        Copyright scarvesfamily&copy; <?php echo date("Y");?>
-    </footer><br>
-
+<footer class="site-footer">
+    <a class="btn secondary" href="index.php">Back to my list</a>
+    <p>Copyright scarvesfamily&copy; <?= date('Y') ?></p>
+</footer>
 </body>
 </html>
